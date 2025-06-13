@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import LogoCecyte from '../../assets/LogoCecyte.png';
 import './LoginScreen.css';
 
@@ -7,7 +7,7 @@ const LoginScreen = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({ username: false, password: false });
-  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -20,7 +20,7 @@ const LoginScreen = () => {
     setErrors(newErrors);
     
     if (!newErrors.username && !newErrors.password) {
-      login(username);
+      navigate('/dashboard');
     }
   };
 
@@ -60,7 +60,7 @@ const LoginScreen = () => {
             </div>
             
             <div className="form-group">
-              <button type="submit" className="submit-button">
+              <button type="submit" className="orange-button">
                 Iniciar Sesión
               </button>
             </div>

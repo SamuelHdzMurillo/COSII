@@ -1,0 +1,93 @@
+/* Header.css */
+.header-container {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .header-content {
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .logo-image {
+    max-height: 40px; /* Ajusta este valor según necesites */
+    width: auto;
+    object-fit: contain;
+  }
+  
+  .system-name {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1a202c;
+    margin: 0;
+  }
+  
+  .user-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .username {
+    color: #4a5568;
+    margin: 0;
+  }
+  
+  .orange-button {
+    background-color: orange;
+    border-color: orange;
+  }
+  .orange-button:hover {
+    background-color: darkorange;
+    border-color: darkorange;
+  }
+  .logout-button {
+    background-color: orange;
+    border-color: orange;
+  }
+  .logout-button:hover {
+    background-color: darkorange;
+    border-color: darkorange;
+  
+    color: #e53e3e;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .logout-button:hover {
+    color: #c53030;
+  }
+  
+  .logout-text {
+    margin-left: 0.25rem;
+  }
+  
+  /* Media queries para responsividad */
+  @media (max-width: 768px) {
+    .header-content {
+      flex-direction: column;
+      padding: 0.5rem;
+    }
+    
+    .logo-container {
+      margin-bottom: 0.5rem;    
+    }
+    
+    .system-name {
+      font-size: 1rem;
+    }
+    
+    .username {
+      font-size: 0.875rem;
+    }
+  }

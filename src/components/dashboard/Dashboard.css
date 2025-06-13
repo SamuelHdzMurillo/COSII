@@ -1,0 +1,63 @@
+/* Dashboard.css */
+
+/* Botones primarios naranja */
+.ant-btn-primary {
+    background-color: #ff7b25;
+    border-color: #ff7b25;
+  }
+  
+  .ant-btn-primary:hover,
+  .ant-btn-primary:focus {
+    background-color: #e66a1a;
+    border-color: #e66a1a;
+  }
+  
+  .ant-btn-primary:active {
+    background-color: #cc5910;
+    border-color: #cc5910;
+  }
+  
+  /* Botones default (secundarios) verdes */
+  .ant-btn-default {
+    color: #52c41a;
+    border-color: #52c41a;
+  }
+  
+  .ant-btn-default:hover,
+  .ant-btn-default:focus {
+    color: #3aad00;
+    border-color: #3aad00;
+  }
+  
+  .ant-btn-default:active {
+    color: #289500;
+    border-color: #289500;
+  }
+  
+  /* Asegurar que los botones de peligro mantengan su color rojo */
+  .ant-btn-danger {
+    color: #fff;
+    background: #ff4d4f;
+    border-color: #ff4d4f;
+  }
+  
+  /* Estilos específicos para botones con clases personalizadas */
+  .orange-button {
+    background-color: orange;
+    border-color: orange;
+  }
+  
+  .orange-button:hover {
+    background-color: darkorange;
+    border-color: darkorange;
+  }
+  
+  .green-button {
+    background-color: green;
+    border-color: green;
+  }
+  
+  .green-button:hover {
+    background-color: darkgreen;
+    border-color: darkgreen;
+  }
