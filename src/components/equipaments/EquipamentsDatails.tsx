@@ -1,24 +1,35 @@
+// src/pages/EquipmentDetails.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
 import { 
   Card, 
   Button, 
   Typography, 
   Divider, 
-  List, 
   Form, 
   Input,
-  Modal
+  Modal,
+  Spin,
+  DatePicker,
+  Select,
+  Space,
+  message
 } from 'antd';
 import { 
   ArrowLeftOutlined, 
   FilePdfOutlined, 
-  FileTextOutlined 
+  FileTextOutlined,
+  EyeOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import dayjs, { Dayjs } from 'dayjs';
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 interface Equipment {
   id: string;
@@ -41,15 +52,24 @@ const EquipmentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [diagnosticForm] = Form.useForm();
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportType, setReportType] = useState<'complete' | 'summary'>('complete');
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>();
+  const [filteredDiagnostics, setFilteredDiagnostics] = useState<Diagnostic[]>([]);
 
   useEffect(() => {
     if (id) {
       loadEquipment(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (equipment) {
+      applyFilters();
+    }
+  }, [equipment, dateRange]);
 
   const loadEquipment = (equipmentId: string) => {
     setLoading(true);
@@ -60,10 +80,27 @@ const EquipmentDetails: React.FC = () => {
         const foundEquipment = equipments.find(eq => eq.id === equipmentId);
         if (foundEquipment) {
           setEquipment(foundEquipment);
+          setFilteredDiagnostics(foundEquipment.diagnostics);
         }
       }
       setLoading(false);
     }, 500);
+  };
+
+  const applyFilters = () => {
+    if (!equipment) return;
+
+    let diagnostics = [...equipment.diagnostics];
+
+    if (dateRange) {
+      diagnostics = diagnostics.filter(d => {
+        const date = dayjs(d.date);
+        return date.isAfter(dateRange[0].startOf('day')) && 
+               date.isBefore(dateRange[1].endOf('day'));
+      });
+    }
+
+    setFilteredDiagnostics(diagnostics);
   };
 
   const handleAddDiagnostic = (values: { text: string; user: string }) => {
@@ -90,6 +127,7 @@ const EquipmentDetails: React.FC = () => {
       localStorage.setItem('equipments', JSON.stringify(updatedEquipments));
       setEquipment(updatedEquipment);
       diagnosticForm.resetFields();
+      message.success('Diagnóstico agregado correctamente');
     }
   };
 
@@ -98,8 +136,43 @@ const EquipmentDetails: React.FC = () => {
     setReportModalVisible(true);
   };
 
+  const handleDateRangeChange = (dates: [Dayjs, Dayjs] | null) => {
+    setDateRange(dates || undefined);
+  };
+
+  const handleJsPdf = () => {
+    if (!equipment) return;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Reporte de Equipo Técnico', 10, 15);
+    doc.setFontSize(12);
+    doc.text(`Número de Inventario: ${equipment.inventoryNumber}`, 10, 30);
+    doc.text(`Modelo/Serie: ${equipment.modelSerial}`, 10, 40);
+    doc.text(`Fecha de Registro: ${equipment.registrationDate}`, 10, 50);
+    doc.text(`Ubicación: ${equipment.locationId}`, 10, 60);
+    doc.text('Diagnósticos:', 10, 75);
+    equipment.diagnostics.slice(0, 3).forEach((diag, idx) => {
+      doc.text(
+        `${idx + 1}. ${diag.user} - ${diag.date}: ${diag.text}`,
+        12,
+        85 + idx * 10
+      );
+    });
+    window.open(doc.output('bloburl'), '_blank');
+  };
+
+  // Nueva función para generar un PDF simple con Lorem Ipsum
+  const handleSimplePdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Reporte de Prueba', 10, 15);
+    doc.setFontSize(12);
+    doc.text('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nunc ut laoreet dictum, massa sapien pretium libero, nec cursus enim erat nec urna. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam nisl nunc eu nisl.', 10, 30, { maxWidth: 180 });
+    window.open(doc.output('bloburl'), '_blank');
+  };
+
   if (!equipment) {
-    return <div>Loading...</div>;
+    return <Spin tip="Cargando equipo..." fullscreen />;
   }
 
   return (
@@ -145,35 +218,40 @@ const EquipmentDetails: React.FC = () => {
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
-            onClick={() => handleGenerateReport('complete')}
+            onClick={handleSimplePdf}
             className="bg-indigo-600 hover:bg-indigo-700"
           >
-            Generar Reporte Completo
+            Generar Reporte PDF
           </Button>
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => handleGenerateReport('summary')}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Generar Reporte Resumido
-          </Button>
-        </Space>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Diagnostic History */}
         <Card className="rounded-lg shadow">
-          <Title level={4} className="text-xl font-semibold text-gray-800 mb-4">
-            Historial de Diagnósticos
-          </Title>
+          <div className="flex justify-between items-center mb-4">
+            <Title level={4} className="text-xl font-semibold text-gray-800">
+              Historial de Diagnósticos
+            </Title>
+            <Space>
+              <RangePicker
+                onChange={(dates: any, dateStrings: [string, string]) => handleDateRangeChange(dates as [Dayjs, Dayjs] | null)}
+                format="DD/MM/YYYY"
+                placeholder={['Fecha inicio', 'Fecha fin']}
+              />
+              <Text type="secondary">
+                Mostrando {filteredDiagnostics.length} de {equipment.diagnostics.length}
+              </Text>
+            </Space>
+          </div>
           
-          {equipment.diagnostics.length === 0 ? (
+          {filteredDiagnostics.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
-              No hay diagnósticos registrados.
+              No hay diagnósticos registrados para el filtro seleccionado.
             </div>
           ) : (
             <div className="space-y-4">
-              {equipment.diagnostics.map(diagnostic => (
+              {filteredDiagnostics.map(diagnostic => (
                 <div key={diagnostic.id} className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between items-start mb-2">
                     <Text className="text-sm font-medium text-gray-600">
@@ -220,6 +298,7 @@ const EquipmentDetails: React.FC = () => {
                 type="primary" 
                 htmlType="submit" 
                 className="bg-indigo-600 hover:bg-indigo-700 w-full"
+                loading={loading}
               >
                 Guardar Diagnóstico
               </Button>
@@ -227,37 +306,6 @@ const EquipmentDetails: React.FC = () => {
           </Form>
         </Card>
       </div>
-
-      {/* PDF Modal */}
-      <Modal
-        title={`Reporte ${reportType === 'complete' ? 'Completo' : 'Resumido'}`}
-        open={reportModalVisible}
-        onCancel={() => setReportModalVisible(false)}
-        width={800}
-        footer={[
-          <Button 
-            key="download" 
-            type="primary"
-            className="orange-button"
-            icon={<FilePdfOutlined />}
-          >
-            Descargar PDF
-          </Button>,
-          <Button 
-            key="close" 
-            onClick={() => setReportModalVisible(false)}
-          >
-            Cerrar
-          </Button>,
-        ]}
-      >
-        <div className="h-96 bg-gray-100 rounded flex items-center justify-center">
-          <div className="text-center">
-            <FilePdfOutlined className="text-4xl text-gray-400 mb-2" />
-            <Text type="secondary">Vista previa del reporte PDF</Text>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

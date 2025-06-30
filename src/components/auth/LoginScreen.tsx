@@ -2,25 +2,60 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogoCecyte from '../../assets/LogoCecyte.png';
 import './LoginScreen.css';
+import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api';
 
 const LoginScreen = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({ username: false, password: false });
+  const [errors, setErrors] = useState({ email: false, password: false });
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     const newErrors = {
-      username: !username.trim(),
+      email: !email.trim() || !validateEmail(email.trim()),
       password: !password.trim()
     };
     
     setErrors(newErrors);
+    setErrorMessage('');
     
-    if (!newErrors.username && !newErrors.password) {
-      navigate('/dashboard');
+    if (!newErrors.email && !newErrors.password) {
+      try {
+        setLoading(true);
+        
+        const response = await api.post('/login', {
+          email: email.trim(),
+          password
+        });
+
+        const { user, access_token } = response.data;
+
+        // Usar el método login del contexto de autenticación
+        login(user, access_token);
+        
+        // Redirigir al dashboard
+        navigate('/dashboard');
+      } catch (error) {
+        console.error('Error en el login:', error);
+        setErrorMessage(
+          error instanceof Error ? 
+          error.message : 
+          'Error desconocido al iniciar sesión'
+        );
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -36,15 +71,20 @@ const LoginScreen = () => {
           
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="username">Usuario</label>
+              <label htmlFor="email">Correo electrónico</label>
               <input
-                id="username"
-                type="text"
-                className={errors.username ? 'error' : ''}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                className={errors.email ? 'error' : ''}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
-              {errors.username && <p className="error-message">Por favor ingrese un usuario</p>}
+              {errors.email && (
+                <p className="error-message">
+                  {!email.trim() ? 'Por favor ingrese un correo electrónico' : 'Ingrese un correo electrónico válido'}
+                </p>
+              )}
             </div>
             
             <div className="form-group">
@@ -55,13 +95,20 @@ const LoginScreen = () => {
                 className={errors.password ? 'error' : ''}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
               {errors.password && <p className="error-message">Por favor ingrese una contraseña</p>}
             </div>
             
+            {errorMessage && <p className="error-message">{errorMessage}</p>}
+            
             <div className="form-group">
-              <button type="submit" className="orange-button">
-                Iniciar Sesión
+              <button 
+                type="submit" 
+                className="orange-button"
+                disabled={loading}
+              >
+                {loading ? 'Cargando...' : 'Iniciar Sesión'}
               </button>
             </div>
           </form>
