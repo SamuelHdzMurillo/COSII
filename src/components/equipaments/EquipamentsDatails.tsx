@@ -1,313 +1,176 @@
-// src/pages/EquipmentDetails.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import { 
-  Card, 
-  Button, 
-  Typography, 
-  Divider, 
-  Form, 
-  Input,
-  Modal,
-  Spin,
-  DatePicker,
-  Select,
-  Space,
-  message
-} from 'antd';
-import { 
-  ArrowLeftOutlined, 
-  FilePdfOutlined, 
-  FileTextOutlined,
-  EyeOutlined,
-  DownloadOutlined
-} from '@ant-design/icons';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import dayjs, { Dayjs } from 'dayjs';
+import { Card, Typography, Button, Spin, Layout } from 'antd';
+import { FilePdfOutlined } from '@ant-design/icons';
+import { generateEquipoPdf } from '../equipoPDF/EquipoPDF';
+import HeaderBar from '../header/Header';
+import axios from 'axios';
 
 const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
-const { Option } = Select;
+const { Header, Content, Footer } = Layout;
 
-interface Equipment {
-  id: string;
-  inventoryNumber: string;
-  modelSerial: string;
-  registrationDate: string;
-  locationId: string;
-  diagnostics: Diagnostic[];
-}
-
-interface Diagnostic {
-  id: string;
-  text: string;
-  user: string;
-  date: string;
-}
-
-const EquipmentDetails: React.FC = () => {
+const EquipamentsDatails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [equipo, setEquipo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [equipment, setEquipment] = useState<Equipment | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [diagnosticForm] = Form.useForm();
-  const [reportModalVisible, setReportModalVisible] = useState(false);
-  const [reportType, setReportType] = useState<'complete' | 'summary'>('complete');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>();
-  const [filteredDiagnostics, setFilteredDiagnostics] = useState<Diagnostic[]>([]);
 
   useEffect(() => {
-    if (id) {
-      loadEquipment(id);
-    }
+    const fetchEquipo = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://192.168.10.167:8000/api/equipos`);
+        const equipos = response.data;
+        const equipoEncontrado = equipos.find((eq: any) => eq.id.toString() === id);
+        
+        if (equipoEncontrado) {
+          setEquipo(equipoEncontrado);
+        } else {
+          setEquipo(null);
+        }
+      } catch (error) {
+        console.error('Error fetching equipo:', error);
+        setEquipo(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEquipo();
   }, [id]);
 
-  useEffect(() => {
-    if (equipment) {
-      applyFilters();
-    }
-  }, [equipment, dateRange]);
-
-  const loadEquipment = (equipmentId: string) => {
-    setLoading(true);
-    setTimeout(() => {
-      const storedEquipments = localStorage.getItem('equipments');
-      if (storedEquipments) {
-        const equipments: Equipment[] = JSON.parse(storedEquipments);
-        const foundEquipment = equipments.find(eq => eq.id === equipmentId);
-        if (foundEquipment) {
-          setEquipment(foundEquipment);
-          setFilteredDiagnostics(foundEquipment.diagnostics);
-        }
-      }
-      setLoading(false);
-    }, 500);
-  };
-
-  const applyFilters = () => {
-    if (!equipment) return;
-
-    let diagnostics = [...equipment.diagnostics];
-
-    if (dateRange) {
-      diagnostics = diagnostics.filter(d => {
-        const date = dayjs(d.date);
-        return date.isAfter(dateRange[0].startOf('day')) && 
-               date.isBefore(dateRange[1].endOf('day'));
-      });
-    }
-
-    setFilteredDiagnostics(diagnostics);
-  };
-
-  const handleAddDiagnostic = (values: { text: string; user: string }) => {
-    if (!equipment) return;
-
-    const newDiagnostic = {
-      id: Date.now().toString(),
-      text: values.text,
-      user: values.user,
-      date: new Date().toISOString(),
-    };
-
-    const updatedEquipment = {
-      ...equipment,
-      diagnostics: [...equipment.diagnostics, newDiagnostic],
-    };
-
-    const storedEquipments = localStorage.getItem('equipments');
-    if (storedEquipments) {
-      const equipments: Equipment[] = JSON.parse(storedEquipments);
-      const updatedEquipments = equipments.map(eq =>
-        eq.id === equipment.id ? updatedEquipment : eq
-      );
-      localStorage.setItem('equipments', JSON.stringify(updatedEquipments));
-      setEquipment(updatedEquipment);
-      diagnosticForm.resetFields();
-      message.success('Diagnóstico agregado correctamente');
-    }
-  };
-
-  const handleGenerateReport = (type: 'complete' | 'summary') => {
-    setReportType(type);
-    setReportModalVisible(true);
-  };
-
-  const handleDateRangeChange = (dates: [Dayjs, Dayjs] | null) => {
-    setDateRange(dates || undefined);
-  };
-
-  const handleJsPdf = () => {
-    if (!equipment) return;
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Reporte de Equipo Técnico', 10, 15);
-    doc.setFontSize(12);
-    doc.text(`Número de Inventario: ${equipment.inventoryNumber}`, 10, 30);
-    doc.text(`Modelo/Serie: ${equipment.modelSerial}`, 10, 40);
-    doc.text(`Fecha de Registro: ${equipment.registrationDate}`, 10, 50);
-    doc.text(`Ubicación: ${equipment.locationId}`, 10, 60);
-    doc.text('Diagnósticos:', 10, 75);
-    equipment.diagnostics.slice(0, 3).forEach((diag, idx) => {
-      doc.text(
-        `${idx + 1}. ${diag.user} - ${diag.date}: ${diag.text}`,
-        12,
-        85 + idx * 10
-      );
-    });
-    window.open(doc.output('bloburl'), '_blank');
-  };
-
-  // Nueva función para generar un PDF simple con Lorem Ipsum
-  const handleSimplePdf = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Reporte de Prueba', 10, 15);
-    doc.setFontSize(12);
-    doc.text('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nunc ut laoreet dictum, massa sapien pretium libero, nec cursus enim erat nec urna. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam nisl nunc eu nisl.', 10, 30, { maxWidth: 180 });
-    window.open(doc.output('bloburl'), '_blank');
-  };
-
-  if (!equipment) {
-    return <Spin tip="Cargando equipo..." fullscreen />;
+  if (loading) {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <Header style={{ backgroundColor: '#fff', padding: 3 }}>
+          <HeaderBar />
+        </Header>
+        <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Spin size="large" tip="Cargando equipo..." />
+        </Content>
+      </Layout>
+    );
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <Button
-        type="link"
-        icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/dashboard')}
-        className="text-indigo-600 hover:text-indigo-800 mb-4"
-      >
-        Volver
-      </Button>
-
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <Title level={4} className="text-xl font-semibold text-gray-800 mb-4">
-          Información del Equipo
-        </Title>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Text type="secondary" className="text-sm">Número de Inventario</Text>
-            <Text className="text-lg font-medium block">{equipment.inventoryNumber}</Text>
-          </div>
-          <div>
-            <Text type="secondary" className="text-sm">Modelo y Serie</Text>
-            <Text className="text-lg font-medium block">{equipment.modelSerial}</Text>
-          </div>
-          <div>
-            <Text type="secondary" className="text-sm">Fecha de Registro</Text>
-            <Text className="text-lg font-medium block">
-              {format(new Date(equipment.registrationDate), 'dd/MM/yyyy', { locale: es })}
-            </Text>
-          </div>
-          <div>
-            <Text type="secondary" className="text-sm">Ubicación/ID</Text>
-            <Text className="text-lg font-medium block">{equipment.locationId}</Text>
-          </div>
-        </div>
-        
-        <Divider />
-        
-        <div className="flex gap-4">
-          <Button
-            type="primary"
-            icon={<FilePdfOutlined />}
-            onClick={handleSimplePdf}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            Generar Reporte PDF
+  if (!equipo) {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <Header style={{ backgroundColor: '#fff', padding: 3 }}>
+          <HeaderBar />
+        </Header>
+        <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+          <Text type="danger">Equipo no encontrado</Text>
+          <br />
+          <Button type="link" onClick={() => navigate('/dashboard')}>
+            Volver al dashboard
           </Button>
-        </div>
-      </div>
+        </Content>
+      </Layout>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Diagnostic History */}
-        <Card className="rounded-lg shadow">
-          <div className="flex justify-between items-center mb-4">
-            <Title level={4} className="text-xl font-semibold text-gray-800">
-              Historial de Diagnósticos
-            </Title>
-            <Space>
-              <RangePicker
-                onChange={(dates: any, dateStrings: [string, string]) => handleDateRangeChange(dates as [Dayjs, Dayjs] | null)}
-                format="DD/MM/YYYY"
-                placeholder={['Fecha inicio', 'Fecha fin']}
-              />
-              <Text type="secondary">
-                Mostrando {filteredDiagnostics.length} de {equipment.diagnostics.length}
-              </Text>
-            </Space>
-          </div>
-          
-          {filteredDiagnostics.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
-              No hay diagnósticos registrados para el filtro seleccionado.
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES');
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES') + ' ' + date.toLocaleTimeString('es-ES');
+  };
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      {/* Header */}
+      <Header style={{ backgroundColor: '#fff', padding: 3 }}>
+        <HeaderBar />
+      </Header>
+
+      {/* Main Content */}
+      <Content style={{ backgroundColor: '#f9fafb' }}>
+        <div style={{ padding: '2rem' }}>
+          <Button type="link" onClick={() => navigate('/dashboard')} style={{ marginBottom: '1rem' }}>
+            ← Volver al dashboard
+          </Button>
+          <Card title="Información del Equipo" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
+              <div>
+                <Text type="secondary">Número de Serie</Text>
+                <Title level={5}>{equipo.numeroDeSerieEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Marca</Text>
+                <Title level={5}>{equipo.marcaEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Modelo</Text>
+                <Title level={5}>{equipo.modeloEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Tipo</Text>
+                <Title level={5}>{equipo.tipoDeEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Estado</Text>
+                <Title level={5}>{equipo.estadoEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Fecha de Llegada</Text>
+                <Title level={5}>{formatDate(equipo.fechaLlegada)}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Fecha de Salida</Text>
+                <Title level={5}>{equipo.fechaSalida ? formatDate(equipo.fechaSalida) : 'No ha salido'}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Técnico</Text>
+                <Title level={5}>{equipo.tecnico?.nombre} {equipo.tecnico?.apellidos}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Daño reportado</Text>
+                <Title level={5}>{equipo.danioEquipo}</Title>
+              </div>
+              <div>
+                <Text type="secondary">Accesorios</Text>
+                <Title level={5}>{equipo.accesoriosEquipo}</Title>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredDiagnostics.map(diagnostic => (
-                <div key={diagnostic.id} className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <Text className="text-sm font-medium text-gray-600">
-                      {diagnostic.user} - {format(new Date(diagnostic.date), 'dd/MM/yyyy HH:mm', { locale: es })}
-                    </Text>
+            <Button
+              type="primary"
+              icon={<FilePdfOutlined />}
+              onClick={() => generateEquipoPdf(equipo)}
+              style={{ marginTop: '1rem' }}
+            >
+              Generar Reporte PDF
+            </Button>
+          </Card>
+          <Card title="Observaciones">
+            {equipo.observacionesEquipo ? (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                <Card style={{ backgroundColor: '#fafafa' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <Text strong>{equipo.tecnico?.nombre} {equipo.tecnico?.apellidos}</Text>
+                    <Text type="secondary">{formatDateTime(equipo.fechaLlegada)}</Text>
                   </div>
-                  <Text className="text-gray-700">{diagnostic.text}</Text>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+                  <Text>{equipo.observacionesEquipo}</Text>
+                </Card>
+              </div>
+            ) : (
+              <Text type="secondary" style={{ textAlign: 'center', display: 'block', padding: '1rem' }}>
+                No hay observaciones registradas
+              </Text>
+            )}
+          </Card>
+        </div>
+      </Content>
 
-        {/* New Diagnostic Form */}
-        <Card className="rounded-lg shadow">
-          <Title level={4} className="text-xl font-semibold text-gray-800 mb-4">
-            Registrar Nuevo Diagnóstico
-          </Title>
-          
-          <Form
-            form={diagnosticForm}
-            layout="vertical"
-            className="space-y-4"
-            onFinish={handleAddDiagnostic}
-          >
-            <Form.Item
-              label="Diagnóstico"
-              name="text"
-              rules={[{ required: true, message: 'Por favor ingrese el diagnóstico' }]}
-            >
-              <Input.TextArea rows={4} className="w-full" />
-            </Form.Item>
-            
-            <Form.Item
-              label="Nombre del Técnico"
-              name="user"
-              rules={[{ required: true, message: 'Por favor ingrese el nombre del técnico' }]}
-            >
-              <Input className="w-full" />
-            </Form.Item>
-            
-            <Form.Item>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                className="bg-indigo-600 hover:bg-indigo-700 w-full"
-                loading={loading}
-              >
-                Guardar Diagnóstico
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      </div>
-    </div>
+      {/* Footer */}
+      <Footer style={{ textAlign: 'center', backgroundColor: '#f0f2f5' }}>
+        COSII - Control de órdenes y servicios e inventario interno ©2024
+      </Footer>
+    </Layout>
   );
 };
 
-export default EquipmentDetails;
+export default EquipamentsDatails;

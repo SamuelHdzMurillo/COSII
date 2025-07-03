@@ -209,4 +209,120 @@ const EquipoPDF: React.FC<{ equipment: Equipment; type: 'complete' | 'summary' }
   );
 };
 
+// Función para generar el PDF desde fuera del componente
+export const generateEquipoPdf = async (equipo: any) => {
+  const doc = new jsPDF({ format: 'letter', unit: 'mm' });
+  // Cargar logo como base64
+  const logoUrl = '/src/assets/logoCecyte.png';
+  const getBase64FromUrl = async (url: string) => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+  const logoBase64 = await getBase64FromUrl(logoUrl);
+  // Logo
+  doc.addImage(logoBase64, 'PNG', 35, 10, 30, 30);
+  // Nombre de la escuela en varias líneas, grande y negrita, alineado a la derecha del logo
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  const schoolLines = [
+    'Colegio de Estudios Científicos',
+    'y Tecnológicos del Estado de BCS'
+  ];
+  let textY = 18;
+  schoolLines.forEach(line => {
+    doc.text(line, 70, textY, { align: 'left' });
+    textY += 8;
+  });
+  // Departamento debajo, más pequeño
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(15);
+  doc.text('Departamento de Informática', 70, textY + 2, { align: 'left' });
+  // Fecha y número de orden
+  const fecha = new Date().toLocaleDateString('es-MX');
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${fecha}`, 15, 50);
+  doc.text(`No. Orden de Servicio: ${equipo.id}`, 155, 50);
+  // Tabla de datos del equipo con fondo verde y bordes
+  let y = 60;
+  const pageWidth = 210; // A4 width in mm
+  const margin = 15;
+  const tableWidth = pageWidth - margin * 2;
+  const col1Width = 50;
+  const col2Width = tableWidth - col1Width;
+  // Fondo y título de la tabla
+  doc.setFillColor(0, 180, 80); // verde
+  doc.rect(margin, y, tableWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10); // Letra más chica para títulos de tabla
+  doc.text('Datos del Equipo', pageWidth / 2, y + 5.5, { align: 'center' });
+  doc.setTextColor(0,0,0);
+  y += 10;
+  // Datos del equipo en filas con bordes
+  const rows = [
+    ['Número de Serie', equipo.numeroDeSerieEquipo],
+    ['Estado', equipo.estadoEquipo],
+    ['Marca', equipo.marcaEquipo],
+    ['Modelo', equipo.modeloEquipo],
+    ['Tipo', equipo.tipoDeEquipo],
+    ['Fecha de Llegada', equipo.fechaLlegada],
+    ['Técnico', `${equipo.tecnico.nombre} ${equipo.tecnico.apellidos}`],
+    ['Daño', equipo.danioEquipo],
+    ['Accesorios', equipo.accesoriosEquipo]
+  ];
+  doc.setFontSize(10);
+  rows.forEach(([label, value]) => {
+    doc.setDrawColor(180, 180, 180);
+    doc.rect(margin, y, col1Width, 8); // celda 1
+    doc.rect(margin + col1Width, y, col2Width, 8); // celda 2
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, margin + 2, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(value), margin + col1Width + 2, y + 5);
+    y += 8;
+  });
+  // Espacio antes de trabajo realizado
+  y += 8;
+  // Tabla de trabajo realizado con fondo verde y bordes
+  doc.setFillColor(0, 180, 80); // verde
+  doc.rect(margin, y, tableWidth, 8, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(10); // Letra más chica para títulos de tabla
+  doc.text('Trabajo realizado', pageWidth / 2, y + 5.5, { align: 'center' });
+  doc.setTextColor(0,0,0);
+  y += 10;
+  // Fila de trabajo realizado
+  doc.setDrawColor(180, 180, 180);
+  doc.rect(margin, y, tableWidth, 16);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(equipo.observacionesEquipo || '_________________________', margin + 2, y + 7, { maxWidth: tableWidth - 4 });
+  y += 24;
+  // Firmas y responsables en formato de tabla
+  const tableY = y;
+  // Encabezados
+  doc.setFont('helvetica', 'bold');
+  doc.text('Responsable del área', 30, tableY);
+  doc.text('Verificado y diagnosticado por', 130, tableY);
+  // Nombres centrados
+  doc.setFont('helvetica', 'normal');
+  doc.text('Ing. Daniel Carillo Cortés', 47.5, tableY + 8, { align: 'center' });
+  doc.text(`${equipo.tecnico.nombre} ${equipo.tecnico.apellidos}`, 152.5, tableY + 8, { align: 'center' });
+  // Líneas para firmas
+  doc.line(15, tableY + 20, 80, tableY + 20); // Responsable
+  doc.line(110, tableY + 20, 195, tableY + 20); // Técnico
+  // Etiquetas de firma
+  doc.setFontSize(9);
+  doc.text('Firma Responsable', 47.5, tableY + 25, { align: 'center' });
+  doc.text('Firma Técnico', 152.5, tableY + 25, { align: 'center' });
+  window.open(doc.output('bloburl'), '_blank');
+};
+
 export default EquipoPDF;

@@ -4,6 +4,7 @@ import DashboardLayout from './components/dashboard/DashboardLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { useAuth } from './hooks/useAuth';
+import EquipamentsDatails from './components/equipaments/EquipamentsDatails';
 
 function AppRoutes() {
   const { user, logout } = useAuth();
@@ -20,6 +21,14 @@ function AppRoutes() {
             />
           </ProtectedRoute>
         } 
+      />
+      <Route
+        path="/dashboard/equipos/:id"
+        element={
+          <ProtectedRoute>
+            <EquipamentsDatails />
+          </ProtectedRoute>
+        }
       />
     </Routes>
   );
