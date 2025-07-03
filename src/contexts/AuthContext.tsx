@@ -57,10 +57,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = (userData: User, token: string) => {
+  const login = (userData: any, token: string) => {
+    // Adaptar el usuario recibido de la API al formato esperado por el contexto
+    const adaptedUser: User = {
+      id: userData.id,
+      name: userData.name || userData.nombreUsuario || '',
+      email: userData.email,
+      // Puedes mapear más campos si lo necesitas
+    };
     localStorage.setItem('authToken', token);
-    localStorage.setItem('userData', JSON.stringify(userData));
-    setUser(userData);
+    localStorage.setItem('userData', JSON.stringify(adaptedUser));
+    setUser(adaptedUser);
   };
 
   const logout = () => {
