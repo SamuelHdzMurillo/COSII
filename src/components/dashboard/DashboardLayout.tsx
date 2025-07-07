@@ -62,11 +62,14 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   const [reportType, setReportType] = useState<'complete' | 'summary'>('complete');
   const [activeTab, setActiveTab] = useState('1');
   const [loading, setLoading] = useState(true);
+  const [negocioLoading, setNegocioLoading] = useState(false);
+  const [entityLoading, setEntityLoading] = useState(false);
 
   // Form instances
   const [equipmentForm] = Form.useForm();
   const [entityForm] = Form.useForm();
   const [diagnosticForm] = Form.useForm();
+  const [negocioForm] = Form.useForm();
 
   const navigate = useNavigate();
 
@@ -106,18 +109,28 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   };
 
   // Entity handlers
-  const handleEntitySubmit = (values: any) => {
-    const newEntity: Entity = {
-      id: Date.now(),
-      name: values.name,
-      code: values.code,
-      number: values.number,
-      email: values.email
-    };
-
-    setEntities([...entities, newEntity]);
-    entityForm.resetFields();
-    message.success('Entidad registrada correctamente');
+  const handleEntitySubmit = async (values: any) => {
+    setEntityLoading(true);
+    try {
+      const response = await axios.post('http://192.168.10.167:8000/api/entidades', {
+        nombre: values.name,
+        codigo: values.code,
+        numero: values.number,
+        correo: values.email
+      });
+      setEntities([...entities, response.data]);
+      entityForm.resetFields();
+      message.success('Entidad registrada correctamente');
+    } catch (error: any) {
+      console.error('Error creating entity:', error);
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error('Error al registrar la entidad');
+      }
+    } finally {
+      setEntityLoading(false);
+    }
   };
 
   // Diagnostic handlers
@@ -233,6 +246,23 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     },
   ];
 
+  const onNegocioFinish = async (values: any) => {
+    setNegocioLoading(true);
+    try {
+      await axios.post('http://192.168.10.167:8000/api/negocios', {
+        nombreNegocio: values.nombreNegocio,
+        numeroNegocio: values.numeroNegocio,
+        correoNegocio: values.correoNegocio,
+      });
+      message.success('Negocio registrado correctamente');
+      negocioForm.resetFields();
+    } catch (error) {
+      message.error('Error al registrar el negocio');
+    } finally {
+      setNegocioLoading(false);
+    }
+  };
+
   // Tabs items configuration
   const tabItems = [
     {
@@ -294,51 +324,37 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     },
     {
       key: '2',
-      label: 'Registrar Entidad',
+      label: 'Registrar Negocio',
       children: (
         <Form
-          form={entityForm}
+          form={negocioForm}
           layout="vertical"
-          onFinish={handleEntitySubmit}
+          onFinish={onNegocioFinish}
         >
           <Form.Item
-            label="Nombre"
-            name="name"
-            rules={[{ required: true, message: 'Por favor ingrese el nombre' }]}
+            label="Nombre del Negocio"
+            name="nombreNegocio"
+            rules={[{ required: true, message: 'Por favor ingrese el nombre del negocio' }]}
           >
             <Input />
           </Form.Item>
-          
           <Form.Item
-            label="Código"
-            name="code"
-            rules={[{ required: true, message: 'Por favor ingrese el código' }]}
+            label="Número del Negocio"
+            name="numeroNegocio"
+            rules={[{ required: true, message: 'Por favor ingrese el número del negocio' }]}
           >
             <Input />
           </Form.Item>
-          
           <Form.Item
-            label="Número"
-            name="number"
-            rules={[{ required: true, message: 'Por favor ingrese el número' }]}
+            label="Correo del Negocio"
+            name="correoNegocio"
+            rules={[{ required: true, message: 'Por favor ingrese el correo del negocio' }, { type: 'email', message: 'Por favor ingrese un correo válido' }]}
           >
-            <Input />
+            <Input type="email" />
           </Form.Item>
-          
-          <Form.Item
-            label="Correo"
-            name="email"
-            rules={[
-              { required: true, message: 'Por favor ingrese el correo' },
-              { type: 'email', message: 'Por favor ingrese un correo válido' }
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          
           <Form.Item>
-            <Button type="primary" htmlType="submit" className="orange-button" block>
-              Registrar Entidad
+            <Button type="primary" htmlType="submit" loading={negocioLoading} block>
+              Registrar Negocio
             </Button>
           </Form.Item>
         </Form>
