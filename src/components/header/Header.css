@@ -91,3 +91,9 @@
       font-size: 0.875rem;
     }
   }
+
+@media (max-width: 600px) {
+  .logout-text {
+    display: none;
+  }
+}

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, Card, Form, Input, Button, DatePicker, Table, Space, Modal, Tabs, Spin, message, Select, Upload, Row, Col } from 'antd';
-import { EyeOutlined, FilePdfOutlined, FileTextOutlined, LogoutOutlined } from '@ant-design/icons';
+import { EyeOutlined, FilePdfOutlined, FileTextOutlined, LogoutOutlined, PlusOutlined, ShopOutlined } from '@ant-design/icons';
 import HeaderBar from '../header/Header';
 import '@ant-design/v5-patch-for-react-19';
 import './Dashboard.css';
 import axios from 'axios';
 import { generateEquipoPdf } from '../equipoPDF/EquipoPDF';
 import { useNavigate } from 'react-router-dom';
+import type { Breakpoint } from 'antd/es/_util/responsiveObserver';
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Title, Text } = Typography;
@@ -219,64 +220,70 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   };
 
   // Table columns
-  const equipmentColumns = [
+  const equipmentColumns: Array<any> = [
     {
       title: 'Número de Serie',
       dataIndex: 'numeroDeSerieEquipo',
       key: 'numeroDeSerieEquipo',
-    },
-    {
-      title: 'Estado',
-      dataIndex: 'estadoEquipo',
-      key: 'estado',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Marca',
       dataIndex: 'marcaEquipo',
-      key: 'marca',
+      key: 'marcaEquipo',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Modelo',
       dataIndex: 'modeloEquipo',
       key: 'modeloEquipo',
-    },
-    {
-      title: 'Tipo',
-      dataIndex: 'tipoDeEquipo',
-      key: 'tipoDeEquipo',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Fecha de Llegada',
       dataIndex: 'fechaLlegada',
       key: 'fechaLlegada',
+      responsive: ['md', 'lg', 'xl'] as Breakpoint[],
       render: (date: string) => formatDate(date),
+      sorter: (a: Equipment, b: Equipment) => new Date(b.fechaLlegada).getTime() - new Date(a.fechaLlegada).getTime(),
+      defaultSortOrder: 'descend',
     },
     {
-      title: 'Técnico',
-      key: 'tecnico',
-      render: (_: any, record: Equipment) => (
-        <span>{record.tecnico.nombre} {record.tecnico.apellidos}</span>
-      ),
+      title: 'Tipo',
+      dataIndex: 'tipoDeEquipo',
+      key: 'tipoDeEquipo',
+      responsive: ['md', 'lg', 'xl'] as Breakpoint[],
+    },
+    {
+      title: 'Estado',
+      dataIndex: 'estadoEquipo',
+      key: 'estadoEquipo',
+      responsive: ['md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Acciones',
       key: 'actions',
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
       render: (_: any, record: Equipment) => (
         <Space>
-          <Button 
-            type="link" 
-            icon={<EyeOutlined />} 
-            onClick={() => navigate(`/dashboard/equipos/${record.id}`)}
-          >
-            Ver detalles
-          </Button>
-          <Button
-            type="primary"
-            icon={<FilePdfOutlined />}
-            onClick={() => generateEquipoPdf(record)}
-          >
-            Generar Reporte PDF
-          </Button>
+          <span className="action-btns-responsive">
+            <Button 
+              type="link" 
+              icon={<EyeOutlined />} 
+              onClick={() => navigate(`/dashboard/equipos/${record.id}`)}
+              className="action-btn"
+            >
+              <span className="action-btn-text">Ver detalles</span>
+            </Button>
+            <Button
+              type="primary"
+              icon={<FilePdfOutlined />}
+              onClick={() => generateEquipoPdf(record)}
+              className="action-btn"
+            >
+              <span className="action-btn-text">Generar Reporte PDF</span>
+            </Button>
+          </span>
         </Space>
       ),
     },
@@ -409,19 +416,20 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
         {/* Elimina el Sider/sidebar y deja solo el Content principal */}
         <Content style={{ padding: '2rem', backgroundColor: '#f9fafb' }}>
           <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Title level={4}>Equipos Registrados</Title>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <Title level={3} className="equipos-title">Equipos Registrados</Title>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <Input
                 placeholder="Buscar equipo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', maxWidth: '400px' }}
+                style={{ width: '100%', maxWidth: 320, minWidth: 180, fontSize: 16, boxShadow: '0 0 0 2px #fa8c1622', borderColor: '#fa8c16' }}
+                allowClear
               />
-              <Button type="primary" onClick={() => setIsEquipoModalOpen(true)}>
-                Registrar Equipo
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsEquipoModalOpen(true)} title="Registrar Equipo" className="register-btn">
+                <span className="btn-text-desktop">Registrar Equipo</span>
               </Button>
-              <Button onClick={() => setIsNegocioModalOpen(true)}>
-                Registrar Negocio
+              <Button icon={<ShopOutlined />} onClick={() => setIsNegocioModalOpen(true)} title="Registrar Negocio" className="register-btn">
+                <span className="btn-text-desktop">Registrar Negocio</span>
               </Button>
             </div>
           </div>
@@ -434,7 +442,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
             ) : filteredEquipments.length > 0 ? (
               <Table
                 columns={equipmentColumns}
-                dataSource={filteredEquipments}
+                dataSource={[...filteredEquipments].sort((a, b) => new Date(b.fechaLlegada).getTime() - new Date(a.fechaLlegada).getTime())}
                 rowKey="id"
                 pagination={{ pageSize: 10 }}
               />
@@ -459,52 +467,109 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
               onFinish={handleEquipmentSubmit}
               encType="multipart/form-data"
             >
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Técnico" name="tecnico_id" rules={[{ required: true, message: 'Selecciona un técnico' }]}> <Select placeholder="Selecciona un técnico">{tecnicos.map((t: any) => (<Select.Option key={t.id} value={t.id}>{t.nombre} {t.apellidos}</Select.Option>))}</Select> </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Negocio" name="negocio_id" rules={[{ required: true, message: 'Selecciona un negocio' }]}> <Select placeholder="Selecciona un negocio">{negocios.map((n: any) => (<Select.Option key={n.id} value={n.id}>{n.nombreNegocio}</Select.Option>))}</Select> </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Estado" name="estadoEquipo" rules={[{ required: true, message: 'Estado requerido' }]}> <Select placeholder="Selecciona el estado"><Select.Option value="Recibido">Recibido</Select.Option><Select.Option value="En diagnóstico">En diagnóstico</Select.Option><Select.Option value="En reparación">En reparación</Select.Option><Select.Option value="Entregado">Entregado</Select.Option></Select> </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Tipo de Equipo" name="tipoDeEquipo" rules={[{ required: true, message: 'Tipo requerido' }]}> <Input /> </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Marca" name="marcaEquipo" rules={[{ required: true, message: 'Marca requerida' }]}> <Input /> </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Modelo" name="modeloEquipo" rules={[{ required: true, message: 'Modelo requerido' }]}> <Input /> </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Número de Serie" name="numeroDeSerieEquipo" rules={[{ required: true, message: 'Número de serie requerido' }]}> <Input /> </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Daño" name="danioEquipo"> <Input /> </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Accesorios" name="accesoriosEquipo"> <Input /> </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Fecha de Llegada" name="fechaLlegada" rules={[{ required: true, message: 'Fecha de llegada requerida' }]}> <DatePicker showTime style={{ width: '100%' }} /> </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Fecha de Salida" name="fechaSalida"> <DatePicker showTime style={{ width: '100%' }} /> </Form.Item>
-                </Col>
-              </Row>
-              <Form.Item label="Observaciones" name="observacionesEquipo">
+              <div className="form-grid">
+                <Form.Item
+                  label="Técnico"
+                  name="tecnico_id"
+                  rules={[{ required: true, message: 'Selecciona un técnico' }]}
+                >
+                  <Select placeholder="Selecciona un técnico">
+                    {tecnicos.map((t: any) => (
+                      <Select.Option key={t.id} value={t.id}>{t.nombre} {t.apellidos}</Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label="Negocio"
+                  name="negocio_id"
+                  rules={[{ required: true, message: 'Selecciona un negocio' }]}
+                >
+                  <Select placeholder="Selecciona un negocio">
+                    {negocios.map((n: any) => (
+                      <Select.Option key={n.id} value={n.id}>{n.nombreNegocio}</Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </div>
+              <div className="form-grid">
+                <Form.Item
+                  label="Estado"
+                  name="estadoEquipo"
+                  rules={[{ required: true, message: 'Estado requerido' }]}
+                >
+                  <Select placeholder="Selecciona el estado">
+                    <Select.Option value="Recibido">Recibido</Select.Option>
+                    <Select.Option value="En diagnóstico">En diagnóstico</Select.Option>
+                    <Select.Option value="En reparación">En reparación</Select.Option>
+                    <Select.Option value="Entregado">Entregado</Select.Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label="Tipo de Equipo"
+                  name="tipoDeEquipo"
+                  rules={[{ required: true, message: 'Tipo requerido' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </div>
+              <div className="form-grid">
+                <Form.Item
+                  label="Marca"
+                  name="marcaEquipo"
+                  rules={[{ required: true, message: 'Marca requerida' }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label="Modelo"
+                  name="modeloEquipo"
+                  rules={[{ required: true, message: 'Modelo requerido' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </div>
+              <div className="form-grid">
+                <Form.Item
+                  label="Número de Serie"
+                  name="numeroDeSerieEquipo"
+                  rules={[{ required: true, message: 'Número de serie requerido' }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label="Daño"
+                  name="danioEquipo"
+                >
+                  <Input />
+                </Form.Item>
+              </div>
+              <div className="form-grid">
+                <Form.Item
+                  label="Accesorios"
+                  name="accesoriosEquipo"
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label="Fecha de Llegada"
+                  name="fechaLlegada"
+                  rules={[{ required: true, message: 'Fecha de llegada requerida' }]}
+                >
+                  <DatePicker showTime style={{ width: '100%' }} />
+                </Form.Item>
+              </div>
+              <div className="form-grid">
+                <Form.Item
+                  label="Fecha de Salida"
+                  name="fechaSalida"
+                >
+                  <DatePicker showTime style={{ width: '100%' }} />
+                </Form.Item>
+              </div>
+              <Form.Item
+                label="Observaciones"
+                name="observacionesEquipo"
+              >
                 <Input.TextArea rows={3} />
               </Form.Item>
               <Form.Item>

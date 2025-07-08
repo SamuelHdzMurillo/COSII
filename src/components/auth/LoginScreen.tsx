@@ -46,13 +46,16 @@ const LoginScreen = () => {
         
         // Redirigir al dashboard
         navigate('/dashboard');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error en el login:', error);
-        setErrorMessage(
-          error instanceof Error ? 
-          error.message : 
-          'Error desconocido al iniciar sesión'
-        );
+        // Manejo de error para credenciales incorrectas
+        if (error.response && (error.response.status === 401 || error.response.status === 422)) {
+          setErrorMessage('Correo o contraseña incorrecta');
+        } else if (error instanceof Error) {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage('Error desconocido al iniciar sesión');
+        }
       } finally {
         setLoading(false);
       }

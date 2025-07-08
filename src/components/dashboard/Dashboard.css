@@ -1,21 +1,58 @@
 /* Dashboard.css */
 
-/* Botones primarios naranja */
-.ant-btn-primary {
-    background-color: #ff7b25;
-    border-color: #ff7b25;
-  }
-  
-  .ant-btn-primary:hover,
-  .ant-btn-primary:focus {
-    background-color: #e66a1a;
-    border-color: #e66a1a;
-  }
-  
-  .ant-btn-primary:active {
-    background-color: #cc5910;
-    border-color: #cc5910;
-  }
+/* Botón primario naranja */
+.ant-btn-primary,
+.ant-btn-primary:active,
+.ant-btn-primary:focus,
+.ant-btn-primary:hover,
+.register-btn.ant-btn-primary,
+.register-btn.ant-btn-primary:active,
+.register-btn.ant-btn-primary:focus,
+.register-btn.ant-btn-primary:hover,
+.logout-button.ant-btn-primary,
+.logout-button.ant-btn-primary:active,
+.logout-button.ant-btn-primary:focus,
+.logout-button.ant-btn-primary:hover {
+  background-color: #fa8c16 !important;
+  border-color: #fa8c16 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.ant-btn-primary:hover,
+.register-btn.ant-btn-primary:hover,
+.logout-button.ant-btn-primary:hover {
+  background-color: #d46b08 !important;
+  border-color: #d46b08 !important;
+  color: #fff !important;
+}
+/* Botón verde (success) */
+.ant-btn-success, .ant-btn-success:active, .ant-btn-success:focus {
+  background-color: #52c41a;
+  border-color: #52c41a;
+  color: #fff;
+}
+.ant-btn-success:hover {
+  background-color: #237804;
+  border-color: #237804;
+  color: #fff;
+}
+/* Botón secundario (default) */
+.ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link):not(.ant-btn-success),
+.register-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link):not(.ant-btn-success) {
+  background-color: #fff;
+  border-color: #bfbfbf;
+  color: #06c83d;
+}
+.ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link):not(.ant-btn-success):hover,
+.register-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(.ant-btn-link):not(.ant-btn-success):hover {
+  background-color: #e6f4ea;
+  border-color: #b7eb8f;
+  color: #237804;
+}
+/* Botón link */
+.ant-btn-link, .ant-btn-link:hover, .ant-btn-link:focus {
+  color: #fa8c16;
+}
   
   /* Botones default (secundarios) verdes */
   .ant-btn-default {
@@ -61,3 +98,23 @@
     background-color: darkgreen;
     border-color: darkgreen;
   }
+
+.register-btn { min-width: 140px; padding: 0 16px; display: flex; align-items: center; justify-content: center; }
+
+@media (max-width: 768px) {
+  .action-btn-text { display: none; }
+  .action-btn { min-width: 32px; padding: 0 8px; }
+  .btn-text-desktop { display: none; }
+  .equipos-title { font-size: 1.1rem !important; }
+  .register-btn { min-width: 40px; padding: 0; }
+}
+
+:where(.css-dev-only-do-not-override-ut69n1).ant-btn-color-link.ant-btn-variant-link {
+  color: #52c41a !important;
+}
+:where(.css-dev-only-do-not-override-ut69n1).ant-btn-color-link.ant-btn-variant-link:hover,
+:where(.css-dev-only-do-not-override-ut69n1).ant-btn-color-link.ant-btn-variant-link:focus {
+  color: #237804 !important;
+  border-color: #237804 !important;
+  box-shadow: 0 0 0 2px #b7eb8f33 !important;
+}
