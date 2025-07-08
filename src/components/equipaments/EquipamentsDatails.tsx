@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Typography, Button, Spin, Layout, Input } from 'antd';
+import { Card, Typography, Button, Spin, Layout, Input, Image } from 'antd';
 import { FilePdfOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { generateEquipoPdf } from '../equipoPDF/EquipoPDF';
 import HeaderBar from '../header/Header';
@@ -255,6 +255,40 @@ const EquipamentsDatails: React.FC = () => {
             ) : (
               <Text type="secondary" style={{ textAlign: 'center', display: 'block', padding: '1rem' }}>
                 No hay observaciones registradas
+              </Text>
+            )}
+          </Card>
+          <Card title="Imágenes del Equipo" style={{ marginTop: '1.5rem' }}>
+            {equipo.imagenesEquipo && equipo.imagenesEquipo.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                {equipo.imagenesEquipo
+                  .filter((imagen: any) => imagen !== null && imagen !== undefined)
+                  .map((imagen: any, index: number) => (
+                  <div key={index} style={{ textAlign: 'center' }}>
+                    <Image
+                      src={imagen.url || `http://192.168.10.167:8000/storage/${imagen}`}
+                      alt={`Imagen ${index + 1} del equipo`}
+                      style={{ 
+                        width: '100%', 
+                        height: '150px', 
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                      preview={{
+                        mask: 'Ver imagen',
+                        maskClassName: 'custom-mask'
+                      }}
+                    />
+                    <Text type="secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
+                      Imagen {index + 1}
+                    </Text>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Text type="secondary" style={{ textAlign: 'center', display: 'block', padding: '1rem' }}>
+                No hay imágenes registradas para este equipo
               </Text>
             )}
           </Card>
