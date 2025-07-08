@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Card, Form, Input, Button, DatePicker, Table, Space, Modal, Tabs, Spin, message } from 'antd';
+import { Layout, Typography, Card, Form, Input, Button, DatePicker, Table, Space, Modal, Tabs, Spin, message, Select, Upload, Row, Col } from 'antd';
 import { EyeOutlined, FilePdfOutlined, FileTextOutlined, LogoutOutlined } from '@ant-design/icons';
 import HeaderBar from '../header/Header';
 import '@ant-design/v5-patch-for-react-19';
@@ -64,6 +64,10 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [negocioLoading, setNegocioLoading] = useState(false);
   const [entityLoading, setEntityLoading] = useState(false);
+  const [tecnicos, setTecnicos] = useState([]);
+  const [negocios, setNegocios] = useState([]);
+  const [isEquipoModalOpen, setIsEquipoModalOpen] = useState(false);
+  const [isNegocioModalOpen, setIsNegocioModalOpen] = useState(false);
 
   // Form instances
   const [equipmentForm] = Form.useForm();
@@ -89,22 +93,54 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
     };
 
     fetchEquipments();
+
+    // Cargar técnicos y negocios para los selects
+    const fetchCatalogos = async () => {
+      try {
+        const [tecnicosRes, negociosRes] = await Promise.all([
+          axios.get('http://192.168.10.167:8000/api/catalogo-tecnicos'),
+          axios.get('http://192.168.10.167:8000/api/catalogo-negocios'),
+        ]);
+        setTecnicos(tecnicosRes.data);
+        setNegocios(negociosRes.data);
+      } catch (e) {
+        message.error('Error al cargar catálogos');
+      }
+    };
+    fetchCatalogos();
   }, []);
 
   // Equipment handlers
   const handleEquipmentSubmit = async (values: any) => {
     try {
-      const response = await axios.post('http://192.168.10.167:8000/api/equipos', {
-        ...values,
-        registrationDate: values.registrationDate.format('YYYY-MM-DD'),
-      });
-      
+      const formData = new FormData();
+      formData.append('tecnico_id', values.tecnico_id);
+      formData.append('negocio_id', values.negocio_id);
+      formData.append('estadoEquipo', values.estadoEquipo);
+      formData.append('tipoDeEquipo', values.tipoDeEquipo);
+      formData.append('marcaEquipo', values.marcaEquipo);
+      formData.append('modeloEquipo', values.modeloEquipo);
+      formData.append('numeroDeSerieEquipo', values.numeroDeSerieEquipo);
+      formData.append('danioEquipo', values.danioEquipo || 'null');
+      formData.append('accesoriosEquipo', values.accesoriosEquipo || '');
+      formData.append('observacionesEquipo', values.observacionesEquipo || 'null');
+      formData.append('fechaLlegada', values.fechaLlegada ? values.fechaLlegada.format('YYYY-MM-DD HH:mm:ss') : '');
+      formData.append('fechaSalida', values.fechaSalida ? values.fechaSalida.format('YYYY-MM-DD HH:mm:ss') : 'null');
+      formData.append('imagenesEquipo[]', ''); // Ensure this is always sent
+      const response = await axios.post('http://192.168.10.167:8000/api/equipos', formData);
       setEquipments([...equipments, response.data]);
       equipmentForm.resetFields();
       message.success('Equipo registrado correctamente');
-    } catch (error) {
+      setIsEquipoModalOpen(false);
+    } catch (error: any) {
       console.error('Error creating equipment:', error);
-      message.error('Error al registrar el equipo');
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
+      } else if (error.response && error.response.data) {
+        message.error(JSON.stringify(error.response.data));
+      } else {
+        message.error('Error al registrar el equipo');
+      }
     }
   };
 
@@ -256,6 +292,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
       });
       message.success('Negocio registrado correctamente');
       negocioForm.resetFields();
+      setIsNegocioModalOpen(false);
     } catch (error) {
       message.error('Error al registrar el negocio');
     } finally {
@@ -273,49 +310,48 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
           form={equipmentForm}
           layout="vertical"
           onFinish={handleEquipmentSubmit}
+          encType="multipart/form-data"
         >
           <Form.Item
-            label="Número de Serie"
-            name="numeroDeSerieEquipo"
-            rules={[{ required: true, message: 'Por favor ingrese el número de serie' }]}
+            label="Técnico"
+            name="tecnico_id"
+            rules={[{ required: true, message: 'Selecciona un técnico' }]}
           >
+            <Select placeholder="Selecciona un técnico">
+              {tecnicos.map((t: any) => (
+                <Select.Option key={t.id} value={t.id}>{t.nombre} {t.apellidos}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="Negocio"
+            name="negocio_id"
+            rules={[{ required: true, message: 'Selecciona un negocio' }]}
+          >
+            <Select placeholder="Selecciona un negocio">
+              {negocios.map((n: any) => (
+                <Select.Option key={n.id} value={n.id}>{n.nombreNegocio}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item label="Estado" name="estadoEquipo" rules={[{ required: true, message: 'Estado requerido' }]}> <Select placeholder="Selecciona el estado"><Select.Option value="Recibido">Recibido</Select.Option><Select.Option value="En diagnóstico">En diagnóstico</Select.Option><Select.Option value="En reparación">En reparación</Select.Option><Select.Option value="Entregado">Entregado</Select.Option></Select> </Form.Item>
+          <Form.Item label="Tipo de Equipo" name="tipoDeEquipo" rules={[{ required: true, message: 'Tipo requerido' }]}> <Input /> </Form.Item>
+          <Form.Item label="Marca" name="marcaEquipo" rules={[{ required: true, message: 'Marca requerida' }]}> <Input /> </Form.Item>
+          <Form.Item label="Modelo" name="modeloEquipo" rules={[{ required: true, message: 'Modelo requerido' }]}> <Input /> </Form.Item>
+          <Form.Item label="Número de Serie" name="numeroDeSerieEquipo" rules={[{ required: true, message: 'Número de serie requerido' }]}> <Input /> </Form.Item>
+          <Form.Item label="Accesorios" name="accesoriosEquipo"> <Input /> </Form.Item>
+          <Form.Item label="Fecha de Llegada" name="fechaLlegada" rules={[{ required: true, message: 'Fecha de llegada requerida' }]}> <DatePicker showTime style={{ width: '100%' }} /> </Form.Item>
+          <Form.Item label="Daño" name="danioEquipo">
             <Input />
           </Form.Item>
-          
-          <Form.Item
-            label="Marca"
-            name="marcaEquipo"
-            rules={[{ required: true, message: 'Por favor ingrese la marca' }]}
-          >
-            <Input />
+          <Form.Item label="Observaciones" name="observacionesEquipo">
+            <Input.TextArea rows={3} />
           </Form.Item>
-          
-          <Form.Item
-            label="Modelo"
-            name="modeloEquipo"
-            rules={[{ required: true, message: 'Por favor ingrese el modelo' }]}
-          >
-            <Input />
+          <Form.Item label="Fecha de Salida" name="fechaSalida">
+            <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
-          
-          <Form.Item
-            label="Tipo de Equipo"
-            name="tipoDeEquipo"
-            rules={[{ required: true, message: 'Por favor ingrese el tipo de equipo' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            label="Fecha de Registro"
-            name="registrationDate"
-            rules={[{ required: true, message: 'Por favor seleccione la fecha' }]}
-          >
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-          
           <Form.Item>
-            <Button type="primary" htmlType="submit" className="orange-button" block>
+            <Button type="primary" htmlType="submit" className="orange-button" block loading={loading}>
               Registrar Equipo
             </Button>
           </Form.Item>
@@ -368,37 +404,26 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
       <Header style={{ backgroundColor: '#fff', padding: 3 }}>
         <HeaderBar currentUser={currentUser} onLogout={onLogout} />
       </Header>
-
       {/* Main Content */}
       <Layout>
-        {/* Left Sidebar - Forms */}
-        <Sider
-          width={350}
-          theme="light"
-          style={{
-            padding: '2rem 1rem',
-            borderRight: '1px solid #e0e0e0',
-            background: '#fff',
-          }}
-        >
-          <Tabs 
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            tabBarStyle={{ marginBottom: 24 }}
-            items={tabItems}
-          />
-        </Sider>
-
-        {/* Main Content - Equipment List */}
+        {/* Elimina el Sider/sidebar y deja solo el Content principal */}
         <Content style={{ padding: '2rem', backgroundColor: '#f9fafb' }}>
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Title level={4}>Equipos Registrados</Title>
-            <Input
-              placeholder="Buscar equipo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', maxWidth: '400px' }}
-            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Input
+                placeholder="Buscar equipo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: '100%', maxWidth: '400px' }}
+              />
+              <Button type="primary" onClick={() => setIsEquipoModalOpen(true)}>
+                Registrar Equipo
+              </Button>
+              <Button onClick={() => setIsNegocioModalOpen(true)}>
+                Registrar Negocio
+              </Button>
+            </div>
           </div>
           
           <Card>
@@ -419,9 +444,119 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
               </Text>
             )}
           </Card>
+          {/* Modal para registrar equipo */}
+          <Modal
+            title="Registrar Equipo"
+            open={isEquipoModalOpen}
+            onCancel={() => setIsEquipoModalOpen(false)}
+            footer={null}
+            destroyOnClose
+            width={800}
+          >
+            <Form
+              form={equipmentForm}
+              layout="vertical"
+              onFinish={handleEquipmentSubmit}
+              encType="multipart/form-data"
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Técnico" name="tecnico_id" rules={[{ required: true, message: 'Selecciona un técnico' }]}> <Select placeholder="Selecciona un técnico">{tecnicos.map((t: any) => (<Select.Option key={t.id} value={t.id}>{t.nombre} {t.apellidos}</Select.Option>))}</Select> </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Negocio" name="negocio_id" rules={[{ required: true, message: 'Selecciona un negocio' }]}> <Select placeholder="Selecciona un negocio">{negocios.map((n: any) => (<Select.Option key={n.id} value={n.id}>{n.nombreNegocio}</Select.Option>))}</Select> </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Estado" name="estadoEquipo" rules={[{ required: true, message: 'Estado requerido' }]}> <Select placeholder="Selecciona el estado"><Select.Option value="Recibido">Recibido</Select.Option><Select.Option value="En diagnóstico">En diagnóstico</Select.Option><Select.Option value="En reparación">En reparación</Select.Option><Select.Option value="Entregado">Entregado</Select.Option></Select> </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Tipo de Equipo" name="tipoDeEquipo" rules={[{ required: true, message: 'Tipo requerido' }]}> <Input /> </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Marca" name="marcaEquipo" rules={[{ required: true, message: 'Marca requerida' }]}> <Input /> </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Modelo" name="modeloEquipo" rules={[{ required: true, message: 'Modelo requerido' }]}> <Input /> </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Número de Serie" name="numeroDeSerieEquipo" rules={[{ required: true, message: 'Número de serie requerido' }]}> <Input /> </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Daño" name="danioEquipo"> <Input /> </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Accesorios" name="accesoriosEquipo"> <Input /> </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Fecha de Llegada" name="fechaLlegada" rules={[{ required: true, message: 'Fecha de llegada requerida' }]}> <DatePicker showTime style={{ width: '100%' }} /> </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Fecha de Salida" name="fechaSalida"> <DatePicker showTime style={{ width: '100%' }} /> </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label="Observaciones" name="observacionesEquipo">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" className="orange-button" block loading={loading}>
+                  Registrar Equipo
+                </Button>
+              </Form.Item>
+            </Form>
+          </Modal>
+          {/* Modal para registrar negocio */}
+          <Modal
+            title="Registrar Negocio"
+            open={isNegocioModalOpen}
+            onCancel={() => setIsNegocioModalOpen(false)}
+            footer={null}
+            destroyOnClose
+          >
+            <Form
+              form={negocioForm}
+              layout="vertical"
+              onFinish={onNegocioFinish}
+            >
+              <Form.Item
+                label="Nombre del Negocio"
+                name="nombreNegocio"
+                rules={[{ required: true, message: 'Por favor ingrese el nombre del negocio' }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item
+                label="Número del Negocio"
+                name="numeroNegocio"
+                rules={[{ required: true, message: 'Por favor ingrese el número del negocio' }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item
+                label="Correo del Negocio"
+                name="correoNegocio"
+                rules={[{ required: true, message: 'Por favor ingrese el correo del negocio' }, { type: 'email', message: 'Por favor ingrese un correo válido' }]}
+              >
+                <Input type="email" />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={negocioLoading} block>
+                  Registrar Negocio
+                </Button>
+              </Form.Item>
+            </Form>
+          </Modal>
         </Content>
       </Layout>
-
       {/* PDF Modal */}
       <Modal
         title={reportType === 'complete' ? 'Reporte Completo' : 'Reporte Resumido'}
@@ -440,7 +575,6 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, onLogout }) => {
           </div>
         </div>
       </Modal>
-
       {/* Footer */}
       <Footer style={{ textAlign: 'center' }}>
         COSII ©2025 - Departamento de Informatica.
