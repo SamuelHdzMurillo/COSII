@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Typography, Button, Spin, Layout } from 'antd';
-import { FilePdfOutlined } from '@ant-design/icons';
+import { Card, Typography, Button, Spin, Layout, Input } from 'antd';
+import { FilePdfOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { generateEquipoPdf } from '../equipoPDF/EquipoPDF';
 import HeaderBar from '../header/Header';
 import axios from 'axios';
@@ -14,6 +14,9 @@ const EquipamentsDatails: React.FC = () => {
   const [equipo, setEquipo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [editMode, setEditMode] = useState(false);
+  const [editValues, setEditValues] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchEquipo = async () => {
@@ -80,6 +83,29 @@ const EquipamentsDatails: React.FC = () => {
     return date.toLocaleDateString('es-ES') + ' ' + date.toLocaleTimeString('es-ES');
   };
 
+  const handleEdit = () => {
+    setEditValues({ ...equipo });
+    setEditMode(true);
+  };
+  const handleCancelEdit = () => {
+    setEditMode(false);
+  };
+  const handleChange = (field: string, value: any) => {
+    setEditValues((prev: any) => ({ ...prev, [field]: value }));
+  };
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`http://192.168.10.167:8000/api/equipos/${equipo.id}`, editValues);
+      setEquipo({ ...editValues });
+      setEditMode(false);
+    } catch (error) {
+      // Puedes mostrar un mensaje de error aquí
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       {/* Header */}
@@ -93,57 +119,127 @@ const EquipamentsDatails: React.FC = () => {
           <Button type="link" onClick={() => navigate('/dashboard')} style={{ marginBottom: '1rem' }}>
             ← Volver al dashboard
           </Button>
-          <Card title="Información del Equipo" style={{ marginBottom: '1.5rem' }}>
+          <Card
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Información del Equipo</span>
+                {!editMode ? (
+                  <Button icon={<EditOutlined />} onClick={handleEdit} size="small" type="default">
+                    Editar información
+                  </Button>
+                ) : (
+                  <span>
+                    <Button icon={<SaveOutlined />} onClick={handleSave} size="small" type="primary" loading={saving} style={{ marginRight: 8 }}>
+                      Guardar
+                    </Button>
+                    <Button icon={<CloseOutlined />} onClick={handleCancelEdit} size="small" type="default">
+                      Cancelar
+                    </Button>
+                  </span>
+                )}
+              </div>
+            }
+            style={{ marginBottom: '1.5rem' }}
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <Text type="secondary">Número de Serie</Text>
-                <Title level={5}>{equipo.numeroDeSerieEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Marca</Text>
-                <Title level={5}>{equipo.marcaEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Modelo</Text>
-                <Title level={5}>{equipo.modeloEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Tipo</Text>
-                <Title level={5}>{equipo.tipoDeEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Estado</Text>
-                <Title level={5}>{equipo.estadoEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Fecha de Llegada</Text>
-                <Title level={5}>{formatDate(equipo.fechaLlegada)}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Fecha de Salida</Text>
-                <Title level={5}>{equipo.fechaSalida ? formatDate(equipo.fechaSalida) : 'No ha salido'}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Técnico</Text>
-                <Title level={5}>{equipo.tecnico?.nombre} {equipo.tecnico?.apellidos}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Daño reportado</Text>
-                <Title level={5}>{equipo.danioEquipo}</Title>
-              </div>
-              <div>
-                <Text type="secondary">Accesorios</Text>
-                <Title level={5}>{equipo.accesoriosEquipo}</Title>
-              </div>
+              {editMode ? (
+                <>
+                  <div>
+                    <Text type="secondary">Número de Serie</Text>
+                    <Input value={editValues.numeroDeSerieEquipo} onChange={e => handleChange('numeroDeSerieEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Marca</Text>
+                    <Input value={editValues.marcaEquipo} onChange={e => handleChange('marcaEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Modelo</Text>
+                    <Input value={editValues.modeloEquipo} onChange={e => handleChange('modeloEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Tipo</Text>
+                    <Input value={editValues.tipoDeEquipo} onChange={e => handleChange('tipoDeEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Estado</Text>
+                    <Input value={editValues.estadoEquipo} onChange={e => handleChange('estadoEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Fecha de Llegada</Text>
+                    <Input value={editValues.fechaLlegada} onChange={e => handleChange('fechaLlegada', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Fecha de Salida</Text>
+                    <Input value={editValues.fechaSalida || ''} onChange={e => handleChange('fechaSalida', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Técnico</Text>
+                    <Input value={editValues.tecnico?.nombre + ' ' + (editValues.tecnico?.apellidos || '')} disabled />
+                  </div>
+                  <div>
+                    <Text type="secondary">Daño reportado</Text>
+                    <Input value={editValues.danioEquipo} onChange={e => handleChange('danioEquipo', e.target.value)} />
+                  </div>
+                  <div>
+                    <Text type="secondary">Accesorios</Text>
+                    <Input value={editValues.accesoriosEquipo} onChange={e => handleChange('accesoriosEquipo', e.target.value)} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <Text type="secondary">Número de Serie</Text>
+                    <Title level={5}>{equipo.numeroDeSerieEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Marca</Text>
+                    <Title level={5}>{equipo.marcaEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Modelo</Text>
+                    <Title level={5}>{equipo.modeloEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Tipo</Text>
+                    <Title level={5}>{equipo.tipoDeEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Estado</Text>
+                    <Title level={5}>{equipo.estadoEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Fecha de Llegada</Text>
+                    <Title level={5}>{formatDate(equipo.fechaLlegada)}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Fecha de Salida</Text>
+                    <Title level={5}>{equipo.fechaSalida ? formatDate(equipo.fechaSalida) : 'No ha salido'}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Técnico</Text>
+                    <Title level={5}>{equipo.tecnico?.nombre} {equipo.tecnico?.apellidos}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Daño reportado</Text>
+                    <Title level={5}>{equipo.danioEquipo}</Title>
+                  </div>
+                  <div>
+                    <Text type="secondary">Accesorios</Text>
+                    <Title level={5}>{equipo.accesoriosEquipo}</Title>
+                  </div>
+                </>
+              )}
             </div>
-            <Button
-              type="primary"
-              icon={<FilePdfOutlined />}
-              onClick={() => generateEquipoPdf(equipo)}
-              style={{ marginTop: '1rem' }}
-            >
-              Generar Reporte PDF
-            </Button>
+            {!editMode && (
+              <Button
+                type="primary"
+                icon={<FilePdfOutlined />}
+                onClick={() => generateEquipoPdf(equipo)}
+                style={{ marginTop: '1rem' }}
+              >
+                Generar Reporte PDF
+              </Button>
+            )}
           </Card>
           <Card title="Observaciones">
             {equipo.observacionesEquipo ? (
@@ -167,7 +263,7 @@ const EquipamentsDatails: React.FC = () => {
 
       {/* Footer */}
       <Footer style={{ textAlign: 'center', backgroundColor: '#f0f2f5' }}>
-        COSII - Control de órdenes y servicios e inventario interno ©2024
+              COSII ©2025 - Departamento de Informatica.
       </Footer>
     </Layout>
   );
